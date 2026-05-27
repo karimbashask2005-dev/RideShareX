@@ -1,0 +1,12 @@
+{
+  "name": "ridesharex-root",
+  "version": "1.0.0",
+  "description": "Indian Intercity Carpooling System Root Orchestration",
+  "main": "server/server.js",
+  "scripts": {
+    "build": "npm install --prefix client && npm run build --prefix client && npm install --prefix server",
+    "start": "node server/server.js"
+  },
+  "author": "",
+  "license": "ISC"
+}
