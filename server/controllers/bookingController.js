@@ -21,11 +21,8 @@ export const createBooking = async (req, res, next) => {
     const platformFee = Math.round(fare * 0.12);
     const totalPrice = fare + platformFee;
 
-    // Check user wallet & identity verification
+    // Check user wallet
     const user = await User.findById(req.user._id);
-    if (!user.isIdentityVerified) {
-      return res.status(400).json({ message: 'Identity verification is required to book a ride. Please verify your government ID.' });
-    }
 
     if (user.walletBalance < totalPrice) {
       return res.status(400).json({ message: 'Insufficient wallet balance' });
@@ -113,6 +110,7 @@ export const getMyBookings = async (req, res, next) => {
       status: b.status,
       rideSourceCoords: { lat: b.ride.sourceLat || 17.3850, lon: b.ride.sourceLon || 78.4867 },
       rideDestCoords: { lat: b.ride.destLat || 16.3067, lon: b.ride.destLon || 80.4365 },
+      vehicleType: b.ride.vehicleType || 'Car',
       vehicleModel: b.ride.vehicleModel || '',
       vehicleNumber: b.ride.vehicleNumber || '',
       driverName: b.ride.driver.name,

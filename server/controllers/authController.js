@@ -153,6 +153,7 @@ export const completeProfile = async (req, res, next) => {
     user.emergencyContact = req.body.emergencyContact || user.emergencyContact;
     user.preferredLanguage = req.body.preferredLanguage || user.preferredLanguage;
     user.city = req.body.city || user.city;
+    user.avatar = req.body.avatar || user.avatar;
     
     await user.save();
     res.json(user);

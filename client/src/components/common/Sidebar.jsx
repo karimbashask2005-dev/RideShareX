@@ -5,7 +5,7 @@ import {
   LayoutDashboard, MapPin, Briefcase, Wallet, 
   MessageSquare, UserCircle, Settings, Award, 
   Users, Eye, Landmark, Percent, Megaphone, HelpCircle,
-  ShieldCheck
+  ShieldCheck, PlusCircle, ClipboardList, Compass
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -33,6 +33,8 @@ export default function Sidebar() {
   // Passenger Navigation Links
   const passengerLinks = [
     { to: '/dashboard', label: 'Overview', icon: LayoutDashboard },
+    { to: '/pre-book', label: 'Pre-Book a Ride', icon: PlusCircle },
+    { to: '/my-requests', label: 'My Travel Requests', icon: ClipboardList },
     { to: '/bookings', label: 'My Bookings', icon: Briefcase },
     { to: '/wallet', label: 'My Wallet', icon: Wallet },
     { to: '/chat', label: 'Conversations', icon: MessageSquare },
@@ -44,6 +46,7 @@ export default function Sidebar() {
   // Driver Navigation Links
   const driverLinks = [
     { to: '/driver', label: 'Driver Panel', icon: LayoutDashboard },
+    { to: '/explore-requests', label: 'Explore Requests', icon: Compass },
     { to: '/driver/rides', label: 'My Offered Rides', icon: MapPin },
     { to: '/driver/requests', label: 'Booking Requests', icon: HelpCircle },
     { to: '/wallet', label: 'Earnings & Wallet', icon: Wallet },

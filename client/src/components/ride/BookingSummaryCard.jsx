@@ -1,14 +1,77 @@
 import React, { useState } from 'react';
 import { ShieldCheck, MapPin, Calendar, Users, FileText } from 'lucide-react';
+import MapPickerModal from '../common/MapPickerModal';
 
 export default function BookingSummaryCard({ ride, seats, onProceed, loading }) {
   const [pickup, setPickup] = useState(ride.pickupPoint);
   const [drop, setDrop] = useState(ride.dropPoint);
   const [notes, setNotes] = useState('');
+  const [fetchingGeo, setFetchingGeo] = useState(false);
+
+  // Map Picker Modal States
+  const [isMapPickerOpen, setIsMapPickerOpen] = useState(false);
+  const [mapPickerTarget, setMapPickerTarget] = useState('pickup');
+
+  const openMapPicker = (target) => {
+    setMapPickerTarget(target);
+    setIsMapPickerOpen(true);
+  };
+
+  const handleSelectMapLocation = (s) => {
+    if (mapPickerTarget === 'pickup') {
+      setPickup(s.address);
+    } else {
+      setDrop(s.address);
+    }
+  };
 
   const fareAmount = ride.pricePerSeat * seats;
   const platformFee = Math.round(fareAmount * 0.12);
   const totalAmount = fareAmount + platformFee;
+
+  const handleUseLiveLocation = () => {
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your browser");
+      return;
+    }
+
+    setFetchingGeo(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`,
+            { headers: { 'Accept-Language': 'en' } }
+          );
+          if (response.ok) {
+            const data = await response.json();
+            const addr = data.address;
+            const name = data.display_name.split(',')[0].trim();
+            const road = addr.road || '';
+            const suburb = addr.suburb || addr.neighbourhood || '';
+            const city = addr.city || addr.town || addr.village || '';
+            
+            const resolvedAddress = [name, road, suburb, city].filter(Boolean).slice(0, 3).join(', ');
+            setPickup(`📍 Live: ${resolvedAddress}`);
+          } else {
+            setPickup(`📍 Live: Lat ${latitude.toFixed(4)}, Lon ${longitude.toFixed(4)}`);
+          }
+        } catch (err) {
+          console.error("Reverse geocoding error:", err);
+          setPickup(`📍 Live: Lat ${latitude.toFixed(4)}, Lon ${longitude.toFixed(4)}`);
+        } finally {
+          setFetchingGeo(false);
+        }
+      },
+      (err) => {
+        console.error("Geolocation error:", err);
+        alert(`Failed to fetch your live location: ${err.message}`);
+        setFetchingGeo(false);
+      },
+      { enableHighAccuracy: true, timeout: 5000 }
+    );
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -43,7 +106,34 @@ export default function BookingSummaryCard({ ride, seats, onProceed, loading }) 
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Custom Pickup */}
         <div className="space-y-1.5">
-          <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Pickup Point</label>
+          <div className="flex justify-between items-center">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Pickup Point</label>
+            <div className="flex items-center space-x-2">
+              <button
+                type="button"
+                onClick={handleUseLiveLocation}
+                disabled={fetchingGeo}
+                className="text-[11px] font-bold text-brand-500 hover:text-brand-650 transition-colors flex items-center gap-1 disabled:text-slate-400"
+              >
+                {fetchingGeo ? (
+                  <>
+                    <span className="w-3 h-3 rounded-full border-2 border-slate-300 border-t-brand-500 animate-spin inline-block"></span>
+                    Locating...
+                  </>
+                ) : (
+                  '📍 Use Live Location'
+                )}
+              </button>
+              <span className="text-slate-200 text-[11px]">|</span>
+              <button
+                type="button"
+                onClick={() => openMapPicker('pickup')}
+                className="text-[11px] font-bold text-indigo-500 hover:text-indigo-655 transition-colors flex items-center gap-1"
+              >
+                🗺️ Select on Map
+              </button>
+            </div>
+          </div>
           <input 
             type="text"
             value={pickup}
@@ -55,7 +145,16 @@ export default function BookingSummaryCard({ ride, seats, onProceed, loading }) 
 
         {/* Custom Drop */}
         <div className="space-y-1.5">
-          <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Drop Location</label>
+          <div className="flex justify-between items-center">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Drop Location</label>
+            <button
+              type="button"
+              onClick={() => openMapPicker('drop')}
+              className="text-[11px] font-bold text-indigo-500 hover:text-indigo-655 transition-colors flex items-center gap-1"
+            >
+              🗺️ Select on Map
+            </button>
+          </div>
           <input 
             type="text"
             value={drop}
@@ -107,6 +206,14 @@ export default function BookingSummaryCard({ ride, seats, onProceed, loading }) 
           {loading ? 'Processing...' : 'Confirm & Pay from Wallet'}
         </button>
       </form>
+      
+      <MapPickerModal
+        isOpen={isMapPickerOpen}
+        onClose={() => setIsMapPickerOpen(false)}
+        onSelect={handleSelectMapLocation}
+        initialLat={ride.sourceLat || 17.3850}
+        initialLon={ride.sourceLon || 78.4867}
+      />
     </div>
   );
 }

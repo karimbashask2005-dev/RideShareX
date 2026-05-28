@@ -4,7 +4,7 @@ const vehicleSchema = new mongoose.Schema({
   driver: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   vehicleType: { 
     type: String, 
-    enum: ['Sedan', 'SUV', 'Hatchback', 'Compact', 'Other'], 
+    enum: ['Sedan', 'SUV', 'Hatchback', 'Compact', 'Bike', 'Motorcycle', 'Scooter', 'Scooty', 'Other'], 
     required: true 
   },
   vehicleModel: { type: String, required: true }, // e.g. Honda City, Maruti Swift

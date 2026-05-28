@@ -632,14 +632,14 @@ export default function VerificationCenter() {
                       onChange={(e) => setVehicleType(e.target.value)}
                       className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:border-brand-500"
                     >
-                      {['Sedan', 'SUV', 'Hatchback', 'Compact', 'Other'].map(type => (
+                      {['Sedan', 'SUV', 'Hatchback', 'Compact', 'Bike', 'Motorcycle', 'Scooter', 'Scooty', 'Other'].map(type => (
                         <option key={type} value={type}>{type}</option>
                       ))}
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-500 mb-1.5">Car Model Name</label>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1.5">Vehicle Model Name</label>
                     <input
                       type="text"
                       disabled={statusData?.isDriverVerified || activeDriver?.status === 'pending'}

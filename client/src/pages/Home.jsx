@@ -35,8 +35,24 @@ export default function Home() {
             Connect with verified drivers heading your way. Share seats, split fuel costs, reduce carbon footprint, and travel with trust.
           </p>
 
+          {/* Quick Actions */}
+          <div className="flex flex-wrap justify-center gap-4 max-w-md mx-auto pt-4">
+            <Link 
+              to="/publish"
+              className="flex-1 min-w-[170px] inline-flex items-center justify-center space-x-2 px-5 py-3 bg-brand-500 hover:bg-brand-600 text-white font-bold text-sm rounded-2xl shadow-lg transition-all duration-200 hover:scale-105 active:scale-95 border border-brand-400"
+            >
+              <span>🚗 Offer a Ride</span>
+            </Link>
+            <Link 
+              to="/pre-book"
+              className="flex-1 min-w-[170px] inline-flex items-center justify-center space-x-2 px-5 py-3 bg-white/10 hover:bg-white/20 text-white font-bold text-sm rounded-2xl shadow-lg transition-all duration-200 hover:scale-105 active:scale-95 border border-white/15 backdrop-blur-sm"
+            >
+              <span>📅 Request a Ride (Pre-Book)</span>
+            </Link>
+          </div>
+
           {/* Search Form overlay */}
-          <div className="pt-8">
+          <div className="pt-4">
             <HeroSearchForm />
           </div>
         </div>

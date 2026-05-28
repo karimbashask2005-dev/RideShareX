@@ -22,6 +22,9 @@ import AdminDashboard from './pages/AdminDashboard';
 import AboutPage from './pages/AboutPage';
 import NotFound from './pages/NotFound';
 import VerificationCenter from './pages/VerificationCenter';
+import PreBookRide from './pages/PreBookRide';
+import ExploreRequests from './pages/ExploreRequests';
+import MyRequests from './pages/MyRequests';
 
 // Protected route wrapper
 import ProtectedRoute from './components/common/ProtectedRoute';
@@ -53,6 +56,8 @@ export default function App() {
               <Route path="/subscription" element={<WalletPage />} />
               <Route path="/verification-center" element={<VerificationCenter />} />
               <Route path="/publish" element={<DriverDashboard />} />
+              <Route path="/pre-book" element={<PreBookRide />} />
+              <Route path="/my-requests" element={<MyRequests />} />
             </Route>
 
             {/* Driver Dashboard Layout */}
@@ -60,6 +65,7 @@ export default function App() {
               <Route path="/driver" element={<DriverDashboard />} />
               <Route path="/driver/rides" element={<DriverDashboard />} />
               <Route path="/driver/requests" element={<DriverDashboard />} />
+              <Route path="/explore-requests" element={<ExploreRequests />} />
             </Route>
 
             {/* Admin Dashboard Layout */}

@@ -5,6 +5,15 @@ import { User, Phone, Mail, FileText, ShieldCheck, CheckCircle2, AlertCircle, Ke
 export default function ProfilePage() {
   const { user, completeProfile, verifyPhone, verifyEmail } = useAuth();
   
+  const AVATAR_PRESETS = [
+    'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150',
+    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150',
+    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=150',
+    'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=150',
+    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150',
+    'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150'
+  ];
+
   // Profile Form states
   const [name, setName] = useState(user?.name || '');
   const [phone, setPhone] = useState(user?.phone || '');
@@ -13,6 +22,12 @@ export default function ProfilePage() {
   const [emergencyContact, setEmergencyContact] = useState(user?.emergencyContact || '');
   const [preferredLanguage, setPreferredLanguage] = useState(user?.preferredLanguage || 'English');
   const [city, setCity] = useState(user?.city || '');
+  const [avatar, setAvatar] = useState(user?.avatar || '');
+
+  // Avatar Modal states
+  const [avatarModalOpen, setAvatarModalOpen] = useState(false);
+  const [customAvatarUrl, setCustomAvatarUrl] = useState('');
+  const [fileLoading, setFileLoading] = useState(false);
 
   // OTP Verification Simulator states
   const [otpOpen, setOtpOpen] = useState(false);
@@ -30,12 +45,78 @@ export default function ProfilePage() {
         bio,
         emergencyContact,
         preferredLanguage,
-        city
+        city,
+        avatar
       });
       alert('Profile updated successfully.');
     } catch (err) {
       alert(err.message || 'Error updating profile');
     }
+  };
+
+  const handleSaveAvatar = async (selectedAvatarUrl) => {
+    try {
+      setAvatar(selectedAvatarUrl);
+      await completeProfile({
+        name,
+        phone,
+        gender,
+        bio,
+        emergencyContact,
+        preferredLanguage,
+        city,
+        avatar: selectedAvatarUrl
+      });
+      setAvatarModalOpen(false);
+      alert('Profile photo updated successfully.');
+    } catch (err) {
+      alert('Failed to update profile photo: ' + err.message);
+    }
+  };
+
+  const handleImageFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file (PNG, JPG, JPEG, WebP, etc.)');
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      alert('File is too large. Please select an image under 2MB.');
+      return;
+    }
+
+    setFileLoading(true);
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const base64 = event.target.result;
+      try {
+        setAvatar(base64);
+        await completeProfile({
+          name,
+          phone,
+          gender,
+          bio,
+          emergencyContact,
+          preferredLanguage,
+          city,
+          avatar: base64
+        });
+        setAvatarModalOpen(false);
+        alert('Profile photo uploaded and updated successfully.');
+      } catch (err) {
+        alert('Failed to save uploaded image: ' + err.message);
+      } finally {
+        setFileLoading(false);
+      }
+    };
+    reader.onerror = () => {
+      alert('Failed to read local image file.');
+      setFileLoading(false);
+    };
+    reader.readAsDataURL(file);
   };
 
   const triggerOtpSend = () => {
@@ -66,14 +147,17 @@ export default function ProfilePage() {
       {/* Verification / Trust Badge summary card */}
       <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-premium flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0">
         <div className="flex items-center space-x-4.5">
-          <div className="relative">
+          <div className="relative group cursor-pointer" onClick={() => setAvatarModalOpen(true)}>
             <img 
-              src={user?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150'} 
+              src={avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150'} 
               alt={user?.name} 
-              className="w-16 h-16 rounded-2xl object-cover ring-4 ring-indigo-50"
+              className="w-16 h-16 rounded-2xl object-cover ring-4 ring-indigo-50 group-hover:opacity-75 transition-opacity"
             />
+            <div className="absolute inset-0 bg-black/45 rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <span className="text-[10px] text-white font-extrabold tracking-wide uppercase">📸 Edit</span>
+            </div>
             {user?.isPhoneVerified && (
-              <span className="absolute -bottom-1 -right-1 bg-emerald-500 text-white p-1 rounded-full border-2 border-white" title="Identity Verified">
+              <span className="absolute -bottom-1 -right-1 bg-emerald-500 text-white p-1 rounded-full border-2 border-white z-10" title="Identity Verified">
                 <ShieldCheck className="w-3.5 h-3.5" />
               </span>
             )}
@@ -284,6 +368,99 @@ export default function ProfilePage() {
         </div>
       )}
 
+      {/* Avatar Selection Modal */}
+      {avatarModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-scale-up">
+          <div className="bg-white w-full max-w-md rounded-[32px] p-6 md:p-8 shadow-2xl border border-slate-100 space-y-6">
+            <div className="flex justify-between items-start">
+              <div className="space-y-1">
+                <h3 className="font-outfit font-extrabold text-slate-800 text-lg">Update Profile Photo</h3>
+                <p className="text-xs text-slate-400">Select a pre-made avatar or link your custom profile picture URL.</p>
+              </div>
+              <button type="button" onClick={() => setAvatarModalOpen(false)} className="text-slate-450 hover:text-slate-650 text-lg font-bold">✕</button>
+            </div>
+
+            {/* Presets Grid */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-extrabold text-slate-450 uppercase tracking-wider block">Choose from presets</label>
+              <div className="grid grid-cols-3 gap-3">
+                {AVATAR_PRESETS.map((url, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleSaveAvatar(url)}
+                    className={`relative rounded-2xl overflow-hidden aspect-square border-2 transition-all ${
+                      avatar === url ? 'border-brand-500 ring-4 ring-brand-500/20' : 'border-slate-100 hover:border-slate-350'
+                    }`}
+                  >
+                    <img src={url} alt={`Preset ${idx + 1}`} className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Custom URL Input */}
+            <div className="space-y-2 pt-2 border-t border-slate-100">
+              <label className="text-[10px] font-extrabold text-slate-455 uppercase tracking-wider block">Or paste custom image URL</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="https://example.com/my-photo.jpg"
+                  value={customAvatarUrl}
+                  onChange={(e) => setCustomAvatarUrl(e.target.value)}
+                  className="flex-1 bg-slate-50 border border-slate-150 rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-850 focus:outline-none focus:border-brand-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (customAvatarUrl) handleSaveAvatar(customAvatarUrl);
+                  }}
+                  className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white font-extrabold text-xs rounded-xl shadow-sm transition-colors"
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+
+            {/* Local Image Upload */}
+            <div className="space-y-2 pt-2 border-t border-slate-100">
+              <label className="text-[10px] font-extrabold text-slate-455 uppercase tracking-wider block">Or upload from your mobile / device</label>
+              <div className="flex flex-col items-center justify-center border-2 border-dashed border-slate-200 hover:border-brand-500 rounded-2xl p-5 transition-colors cursor-pointer group relative bg-slate-50/50 hover:bg-slate-50">
+                <input
+                  type="file"
+                  id="avatar-file-upload"
+                  accept="image/*"
+                  onChange={handleImageFileChange}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                  disabled={fileLoading}
+                />
+                {fileLoading ? (
+                  <div className="flex flex-col items-center justify-center space-y-2">
+                    <span className="w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+                    <span className="text-xs font-bold text-slate-600">Uploading and saving...</span>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-center">
+                    <span className="text-2xl mb-1 text-slate-400 group-hover:text-brand-500 group-hover:scale-110 transition-all duration-300">📁</span>
+                    <span className="text-xs font-bold text-slate-600 group-hover:text-brand-600 transition-colors">Select image from gallery</span>
+                    <span className="text-[10px] text-slate-400 mt-1">Supports PNG, JPG, JPEG (Max 2MB)</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={() => setAvatarModalOpen(false)}
+              className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-655 font-extrabold text-xs rounded-xl transition-colors text-center block"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

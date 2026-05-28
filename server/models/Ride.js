@@ -24,7 +24,7 @@ const rideSchema = new mongoose.Schema({
   availableSeats: { type: Number, required: true },
   totalSeats: { type: Number, required: true },
   pricePerSeat: { type: Number, required: true },
-  vehicleType: { type: String, enum: ['Sedan', 'SUV', 'Hatchback', 'Compact', 'Other'], default: 'Sedan' },
+  vehicleType: { type: String, enum: ['Sedan', 'SUV', 'Hatchback', 'Compact', 'Bike', 'Motorcycle', 'Scooter', 'Scooty', 'Other'], default: 'Sedan' },
   vehicleModel: { type: String, required: true },
   vehicleNumber: { type: String, default: '' },
   luggageAllowed: { type: Boolean, default: true },

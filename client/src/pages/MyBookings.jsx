@@ -234,6 +234,7 @@ export default function MyBookings() {
                 destCoords={trackingBooking.rideDestCoords}
                 isLiveTracking={true}
                 trackingProgress={trackingProgress}
+                vehicleType={trackingBooking.vehicleType}
               />
             </div>
             

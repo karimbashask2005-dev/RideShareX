@@ -7,7 +7,7 @@ import SkeletonCard from '../components/common/SkeletonCard';
 import MapPreview from '../components/common/MapPreview';
 import { 
   Star, ShieldCheck, MapPin, Calendar, Clock, 
-  Car, AlertCircle, Compass, CheckCircle2 
+  Car, Bike, AlertCircle, Compass, CheckCircle2 
 } from 'lucide-react';
 
 export default function RideDetails() {
@@ -148,7 +148,11 @@ export default function RideDetails() {
               <h3 className="font-outfit font-bold text-slate-800">Vehicle Information</h3>
               <div className="flex items-center space-x-4 bg-slate-50 p-4.5 rounded-2xl border border-slate-100">
                 <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-brand-500">
-                  <Car className="w-5.5 h-5.5" />
+                  {['Bike', 'Motorcycle', 'Scooter', 'Scooty'].includes(rideData.vehicleType) ? (
+                    <Bike className="w-5.5 h-5.5" />
+                  ) : (
+                    <Car className="w-5.5 h-5.5" />
+                  )}
                 </div>
                 <div>
                   <h4 className="font-bold text-sm text-slate-800">{rideData.vehicleModel} ({rideData.vehicleType})</h4>
@@ -280,18 +284,6 @@ export default function RideDetails() {
               {isOwnRide ? (
                 <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl text-xs text-rose-700 leading-relaxed">
                   You are the driver of this ride. Drivers cannot book seats on their own published rides.
-                </div>
-              ) : user && !user.isIdentityVerified ? (
-                <div className="space-y-3">
-                  <div className="bg-amber-50 border border-amber-100 p-4 rounded-2xl text-xs text-amber-700 leading-relaxed">
-                    Identity verification is required to book seats. Please verify your government ID first.
-                  </div>
-                  <button 
-                    onClick={() => navigate('/verification-center')}
-                    className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-xl text-xs uppercase tracking-wider transition-all"
-                  >
-                    Verify Identity
-                  </button>
                 </div>
               ) : (
                 <button 

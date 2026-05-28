@@ -158,6 +158,35 @@ const initMockDB = () => {
         description: 'Night drive to Bangalore. Comfortable seats, dynamic music, sleeping passengers welcome!',
         instantBooking: false,
         status: 'active'
+      },
+      {
+        id: 'ride_3',
+        driverId: 'user_driver_1',
+        driverName: 'Arjun Reddy',
+        driverAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=150',
+        driverRating: 4.8,
+        driverVerified: true,
+        sourceCity: 'Vijayawada',
+        destinationCity: 'Guntur',
+        pickupPoint: 'Benz Circle',
+        dropPoint: 'Guntur RTC Bus Stand',
+        intermediateStops: ['Mangalagiri'],
+        date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+        departureTime: '09:00 AM',
+        estimatedArrivalTime: '10:00 AM',
+        availableSeats: 1,
+        totalSeats: 1,
+        pricePerSeat: 120,
+        vehicleType: 'Motorcycle',
+        vehicleModel: 'Royal Enfield Classic 350',
+        vehicleNumber: 'AP 07 RE 3500',
+        luggageAllowed: false,
+        womenOnly: false,
+        smokingAllowed: false,
+        petsAllowed: false,
+        description: 'Daily commute to office. Travelling alone on Enfield. Can carry one passenger with a small backpack.',
+        instantBooking: true,
+        status: 'active'
       }
     ]));
   }
@@ -212,6 +241,33 @@ const initMockDB = () => {
   }
   if (!localStorage.getItem('rx_vehicles')) {
     localStorage.setItem('rx_vehicles', JSON.stringify([]));
+  }
+
+  if (!localStorage.getItem('rx_travel_requests')) {
+    localStorage.setItem('rx_travel_requests', JSON.stringify([
+      {
+        id: 'req_1',
+        passengerId: 'user_passenger_1',
+        sourceCity: 'Guntur',
+        sourceState: 'Andhra Pradesh',
+        sourceDistrict: 'Guntur',
+        sourceLandmark: 'Guntur RTC Bus Stand',
+        destinationCity: 'Hyderabad',
+        destState: 'Telangana',
+        destDistrict: 'Hyderabad',
+        destLandmark: 'JNTU College',
+        pickupPoint: 'Guntur RTC Bus Stand',
+        dropPoint: 'JNTU College, Hyderabad',
+        date: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0], // 3 days later
+        preferredTime: '10:00 AM',
+        seatsNeeded: 2,
+        budget: 500,
+        notes: 'Travelling with family. Small bags only.',
+        status: 'open',
+        offers: [],
+        createdAt: new Date().toISOString()
+      }
+    ]));
   }
 };
 
@@ -472,11 +528,7 @@ const handleMockRequest = (url, options) => {
         if (url === '/bookings' && options.method === 'POST') {
           if (!currentUser) return reject(new Error('Unauthorized'));
           
-          // Check verification status
           const userIndex = users.findIndex(u => u.id === currentUser.id);
-          if (!users[userIndex].isIdentityVerified) {
-            return reject(new Error('Identity verification is required to book a ride. Please verify your government ID in the Verification Center.'));
-          }
 
           const body = JSON.parse(options.body);
           const ride = rides.find(r => r.id === body.rideId);
@@ -529,6 +581,7 @@ const handleMockRequest = (url, options) => {
             createdAt: new Date().toISOString(),
             rideSourceCoords: { lat: ride.sourceLat || 17.3850, lon: ride.sourceLon || 78.4867 },
             rideDestCoords: { lat: ride.destLat || 16.3067, lon: ride.destLon || 80.4365 },
+            vehicleType: ride.vehicleType || 'Car',
             vehicleModel: ride.vehicleModel || '',
             vehicleNumber: ride.vehicleNumber || ''
           };
@@ -1107,6 +1160,316 @@ const handleMockRequest = (url, options) => {
           return reject(new Error('Invalid verification type'));
         }
 
+        // 9. TRAVEL REQUESTS (PRE-BOOKING)
+        if (url === '/requests' && options.method === 'POST') {
+          if (!currentUser) return reject(new Error('Unauthorized'));
+          const body = JSON.parse(options.body);
+          
+          const travelRequests = getFromStorage('rx_travel_requests') || [];
+          const newRequest = {
+            id: 'req_' + Date.now(),
+            passengerId: currentUser.id,
+            sourceCity: body.sourceCity,
+            sourceState: body.sourceState || '',
+            sourceDistrict: body.sourceDistrict || '',
+            sourceLandmark: body.sourceLandmark || '',
+            destinationCity: body.destinationCity,
+            destState: body.destState || '',
+            destDistrict: body.destDistrict || '',
+            destLandmark: body.destLandmark || '',
+            sourceLat: Number(body.sourceLat) || 17.3850,
+            sourceLon: Number(body.sourceLon) || 78.4867,
+            destLat: Number(body.destLat) || 16.3067,
+            destLon: Number(body.destLon) || 80.4365,
+            pickupPoint: body.pickupPoint,
+            dropPoint: body.dropPoint,
+            date: body.date,
+            preferredTime: body.preferredTime,
+            seatsNeeded: Number(body.seatsNeeded),
+            budget: Number(body.budget),
+            notes: body.notes || '',
+            status: 'open',
+            offers: [],
+            createdAt: new Date().toISOString()
+          };
+
+          travelRequests.push(newRequest);
+          saveToStorage('rx_travel_requests', travelRequests);
+          
+          const userObj = users.find(u => u.id === currentUser.id);
+          const populated = {
+            ...newRequest,
+            passenger: { id: userObj.id, _id: userObj.id, name: userObj.name, avatar: userObj.avatar, averageRating: userObj.averageRating }
+          };
+          return resolve(populated);
+        }
+
+        if (url.startsWith('/requests') && options.method === 'GET' && !url.includes('/passenger/my-requests')) {
+          const uObj = new URL(url, 'http://localhost');
+          const source = uObj.searchParams.get('source');
+          const destination = uObj.searchParams.get('destination');
+          const date = uObj.searchParams.get('date');
+
+          const travelRequests = getFromStorage('rx_travel_requests') || [];
+          let filtered = travelRequests.filter(r => r.status === 'open');
+
+          if (source) {
+            filtered = filtered.filter(r => 
+              (r.sourceCity || '').toLowerCase().includes(source.toLowerCase()) ||
+              (r.sourceState || '').toLowerCase().includes(source.toLowerCase()) ||
+              (r.sourceDistrict || '').toLowerCase().includes(source.toLowerCase()) ||
+              (r.sourceLandmark || '').toLowerCase().includes(source.toLowerCase())
+            );
+          }
+          if (destination) {
+            filtered = filtered.filter(r => 
+              (r.destinationCity || '').toLowerCase().includes(destination.toLowerCase()) ||
+              (r.destState || '').toLowerCase().includes(destination.toLowerCase()) ||
+              (r.destDistrict || '').toLowerCase().includes(destination.toLowerCase()) ||
+              (r.destLandmark || '').toLowerCase().includes(destination.toLowerCase())
+            );
+          }
+          if (date) {
+            filtered = filtered.filter(r => r.date === date);
+          }
+
+          const populated = filtered.map(r => {
+            const passengerUser = users.find(u => u.id === r.passengerId) || { name: 'Passenger', avatar: '', averageRating: 5.0 };
+            return {
+              ...r,
+              passenger: {
+                id: passengerUser.id,
+                _id: passengerUser.id,
+                name: passengerUser.name,
+                avatar: passengerUser.avatar,
+                averageRating: passengerUser.averageRating
+              }
+            };
+          });
+
+          return resolve(populated);
+        }
+
+        if (url === '/requests/passenger/my-requests' && options.method === 'GET') {
+          if (!currentUser) return reject(new Error('Unauthorized'));
+          const travelRequests = getFromStorage('rx_travel_requests') || [];
+          const myReqs = travelRequests.filter(r => r.passengerId === currentUser.id);
+
+          const populated = myReqs.map(r => {
+            const passengerUser = users.find(u => u.id === r.passengerId) || { name: 'Passenger', avatar: '' };
+            const populatedOffers = (r.offers || []).map(o => {
+              const driverUser = users.find(u => u.id === o.driverId) || { name: 'Driver', avatar: '', averageRating: 5.0, phone: '' };
+              return {
+                ...o,
+                driver: {
+                  id: driverUser.id,
+                  _id: driverUser.id,
+                  name: driverUser.name,
+                  avatar: driverUser.avatar,
+                  averageRating: driverUser.averageRating,
+                  phone: driverUser.phone
+                }
+              };
+            });
+            return {
+              ...r,
+              passenger: {
+                id: passengerUser.id,
+                _id: passengerUser.id,
+                name: passengerUser.name,
+                avatar: passengerUser.avatar
+              },
+              offers: populatedOffers
+            };
+          });
+
+          return resolve(populated);
+        }
+
+        if (url.startsWith('/requests/') && url.endsWith('/offer') && options.method === 'POST') {
+          if (!currentUser) return reject(new Error('Unauthorized'));
+          const id = url.split('/')[2];
+          const body = JSON.parse(options.body);
+
+          const travelRequests = getFromStorage('rx_travel_requests') || [];
+          const reqIndex = travelRequests.findIndex(r => r.id === id);
+          if (reqIndex === -1) return reject(new Error('Travel request not found'));
+
+          const request = travelRequests[reqIndex];
+          if (request.status !== 'open') return reject(new Error('Request is no longer open'));
+
+          const alreadyOffered = (request.offers || []).some(o => o.driverId === currentUser.id);
+          if (alreadyOffered) return reject(new Error('You have already submitted an offer for this request'));
+
+          if (!request.offers) request.offers = [];
+          
+          const newOffer = {
+            id: 'off_' + Date.now(),
+            _id: 'off_' + Date.now(),
+            driverId: currentUser.id,
+            vehicleType: body.vehicleType,
+            vehicleModel: body.vehicleModel,
+            vehicleNumber: body.vehicleNumber || '',
+            fare: Number(body.fare),
+            notes: body.notes || '',
+            status: 'pending',
+            createdAt: new Date().toISOString()
+          };
+
+          request.offers.push(newOffer);
+          saveToStorage('rx_travel_requests', travelRequests);
+
+          createMockNotification(request.passengerId, 'New Commute Offer!', `${currentUser.name} offered to drive you for ₹${body.fare}.`, 'general');
+
+          return resolve({ message: 'Commute offer sent to passenger successfully', request });
+        }
+
+        if (url.startsWith('/requests/') && url.includes('/offers/') && url.endsWith('/accept') && options.method === 'PUT') {
+          if (!currentUser) return reject(new Error('Unauthorized'));
+          const parts = url.split('/');
+          const id = parts[2];
+          const offerId = parts[4];
+
+          const travelRequests = getFromStorage('rx_travel_requests') || [];
+          const reqIndex = travelRequests.findIndex(r => r.id === id);
+          if (reqIndex === -1) return reject(new Error('Travel request not found'));
+
+          const request = travelRequests[reqIndex];
+          if (request.passengerId !== currentUser.id) {
+            return reject(new Error('Not authorized to manage this request'));
+          }
+          if (request.status !== 'open') return reject(new Error('Request is already processed'));
+
+          const offer = (request.offers || []).find(o => o.id === offerId || o._id === offerId);
+          if (!offer) return reject(new Error('Commute offer not found'));
+
+          const passengerUserIndex = users.findIndex(u => u.id === currentUser.id);
+          const passengerUser = users[passengerUserIndex];
+
+          const totalFare = offer.fare * request.seatsNeeded;
+          const platformFee = Math.round(totalFare * 0.12);
+          const totalPrice = totalFare + platformFee;
+
+          if (passengerUser.walletBalance < totalPrice) {
+            return reject(new Error('Insufficient wallet balance. Please add funds.'));
+          }
+
+          passengerUser.walletBalance -= totalPrice;
+          saveToStorage('rx_users', users);
+          localStorage.setItem('rx_current_user', JSON.stringify(passengerUser));
+
+          createMockTransaction(currentUser.id, totalPrice, 'debit', `Pre-booked travel request booking to ${request.destinationCity}`);
+
+          const rideId = 'ride_req_' + Date.now();
+          const newRide = {
+            id: rideId,
+            driverId: offer.driverId,
+            driverName: users.find(u => u.id === offer.driverId)?.name || 'Driver',
+            driverAvatar: users.find(u => u.id === offer.driverId)?.avatar || '',
+            driverRating: users.find(u => u.id === offer.driverId)?.averageRating || 5.0,
+            driverVerified: true,
+            sourceCity: request.sourceCity,
+            sourceState: request.sourceState,
+            sourceDistrict: request.sourceDistrict,
+            sourceLandmark: request.sourceLandmark,
+            destinationCity: request.destinationCity,
+            destState: request.destState,
+            destDistrict: request.destDistrict,
+            destLandmark: request.destLandmark,
+            isTownOrVillage: !!(request.sourceLandmark || request.destLandmark),
+            sourceLat: request.sourceLat,
+            sourceLon: request.sourceLon,
+            destLat: request.destLat,
+            destLon: request.destLon,
+            pickupPoint: request.pickupPoint,
+            dropPoint: request.dropPoint,
+            date: request.date,
+            departureTime: request.preferredTime,
+            estimatedArrivalTime: 'TBD',
+            availableSeats: 0,
+            totalSeats: request.seatsNeeded,
+            pricePerSeat: offer.fare,
+            vehicleType: offer.vehicleType,
+            vehicleModel: offer.vehicleModel,
+            vehicleNumber: offer.vehicleNumber,
+            status: 'active'
+          };
+          rides.push(newRide);
+          saveToStorage('rx_rides', rides);
+
+          const bookingRef = 'RSX' + Math.floor(100000 + Math.random() * 900000);
+          const newBooking = {
+            id: 'bk_' + Math.floor(100000 + Math.random() * 900000),
+            bookingRef,
+            rideId: newRide.id,
+            rideSource: newRide.sourceCity,
+            rideDestination: newRide.destinationCity,
+            rideDate: newRide.date,
+            rideTime: newRide.departureTime,
+            passengerId: currentUser.id,
+            passengerName: currentUser.name,
+            passengerAvatar: currentUser.avatar,
+            driverId: offer.driverId,
+            driverName: newRide.driverName,
+            driverPhone: users.find(u => u.id === offer.driverId)?.phone || '',
+            seatsBooked: request.seatsNeeded,
+            pickupPoint: request.pickupPoint,
+            dropPoint: request.dropPoint,
+            totalPrice,
+            fareAmount: totalFare,
+            platformFee,
+            notes: offer.notes,
+            status: 'confirmed',
+            paymentStatus: 'success',
+            createdAt: new Date().toISOString(),
+            rideSourceCoords: { lat: newRide.sourceLat || 17.3850, lon: newRide.sourceLon || 78.4867 },
+            rideDestCoords: { lat: newRide.destLat || 16.3067, lon: newRide.destLon || 80.4365 },
+            vehicleType: newRide.vehicleType,
+            vehicleModel: newRide.vehicleModel,
+            vehicleNumber: newRide.vehicleNumber
+          };
+          bookings.push(newBooking);
+          saveToStorage('rx_bookings', bookings);
+
+          request.status = 'confirmed';
+          request.offers.forEach(o => {
+            if (o.id === offerId || o._id === offerId) {
+              o.status = 'accepted';
+            } else {
+              o.status = 'rejected';
+            }
+          });
+          saveToStorage('rx_travel_requests', travelRequests);
+
+          createMockNotification(offer.driverId, 'Offer Accepted!', `${currentUser.name} accepted your offer of ₹${offer.fare}. Ride confirmed!`, 'booking_approval');
+
+          return resolve({ message: 'Offer accepted! Ride pre-booking confirmed.', booking: newBooking, request });
+        }
+
+        if (url.startsWith('/requests/') && url.includes('/offers/') && url.endsWith('/reject') && options.method === 'PUT') {
+          if (!currentUser) return reject(new Error('Unauthorized'));
+          const parts = url.split('/');
+          const id = parts[2];
+          const offerId = parts[4];
+
+          const travelRequests = getFromStorage('rx_travel_requests') || [];
+          const reqIndex = travelRequests.findIndex(r => r.id === id);
+          if (reqIndex === -1) return reject(new Error('Travel request not found'));
+
+          const request = travelRequests[reqIndex];
+          if (request.passengerId !== currentUser.id) {
+            return reject(new Error('Not authorized to manage this request'));
+          }
+
+          const offer = (request.offers || []).find(o => o.id === offerId || o._id === offerId);
+          if (!offer) return reject(new Error('Commute offer not found'));
+
+          offer.status = 'rejected';
+          saveToStorage('rx_travel_requests', travelRequests);
+
+          return resolve({ message: 'Driver offer declined', request });
+        }
+
         // Default 404
         return reject(new Error(`API Path ${url} not found (Mock DB Mode)`));
       } catch (err) {
@@ -1204,4 +1567,16 @@ export const adminService = {
   getPendingVerifications: () => request('/admin/verifications/pending', { method: 'GET' }),
   approveVerification: (id, docType) => request(`/admin/verifications/${id}/approve`, { method: 'PUT', body: JSON.stringify({ docType }) }),
   rejectVerification: (id, docType, reason) => request(`/admin/verifications/${id}/reject`, { method: 'PUT', body: JSON.stringify({ docType, reason }) })
+};
+
+export const requestService = {
+  create: (requestData) => request('/requests', { method: 'POST', body: JSON.stringify(requestData) }),
+  search: (params) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/requests?${q}`, { method: 'GET' });
+  },
+  getMyRequests: () => request('/requests/passenger/my-requests', { method: 'GET' }),
+  submitOffer: (id, offerData) => request(`/requests/${id}/offer`, { method: 'POST', body: JSON.stringify(offerData) }),
+  acceptOffer: (id, offerId) => request(`/requests/${id}/offers/${offerId}/accept`, { method: 'PUT' }),
+  rejectOffer: (id, offerId) => request(`/requests/${id}/offers/${offerId}/reject`, { method: 'PUT' })
 };

@@ -30,6 +30,7 @@ export default function DriverDashboard() {
   const [instantBooking, setInstantBooking] = useState(true);
   const [womenOnly, setWomenOnly] = useState(false);
   const [description, setDescription] = useState('');
+  const [publishing, setPublishing] = useState(false);
 
   // Custom All-India Village/Landmark Location Fields
   const [sourceIsCustom, setSourceIsCustom] = useState(false);
@@ -63,14 +64,44 @@ export default function DriverDashboard() {
         const data = await response.json();
         const formatted = data.map(item => {
           const addr = item.address;
-          const placeName = addr.village || addr.town || addr.city || addr.suburb || addr.municipality || addr.state_district || item.display_name.split(',')[0];
+          const parts = item.display_name.split(',');
+          let placeName = parts[0].trim();
+          
+          if (/^\d+$/.test(placeName) && parts.length > 1) {
+            placeName = `${placeName}, ${parts[1].trim()}`;
+          }
+
+          const cls = (item.class || '').toLowerCase();
+          const type = (item.type || '').toLowerCase();
+          const name = (item.display_name || '').toLowerCase();
+          
+          let emoji = '📍';
+          if (cls === 'amenity' && type === 'place_of_worship' || name.includes('temple') || name.includes('mandir') || name.includes('masjid') || name.includes('church') || name.includes('gurudwara') || name.includes('shrine') || name.includes('tempe')) {
+            emoji = '🛕';
+          } else if (cls === 'amenity' && ['restaurant', 'cafe', 'fast_food', 'food_court', 'pub', 'bar'].includes(type) || name.includes('restaurant') || name.includes('cafe') || name.includes('dhaba') || name.includes('biryani') || name.includes('bakers') || name.includes('sweets') || name.includes('canteen') || name.includes('food') || name.includes('mess')) {
+            emoji = '🍔';
+          } else if (cls === 'shop' || type === 'supermarket' || name.includes('mall') || name.includes('d-mart') || name.includes('dmart') || name.includes('supermarket') || name.includes('hypermarket') || name.includes('bazaar') || name.includes('store') || name.includes('reliance smart') || name.includes('more retail') || name.includes('spencers')) {
+            emoji = '🛍️';
+          } else if (cls === 'amenity' && ['university', 'college', 'school'].includes(type) || name.includes('college') || name.includes('university') || name.includes('school') || name.includes('iit') || name.includes('nit') || name.includes('iiit') || name.includes('campus') || name.includes('institute')) {
+            emoji = '🏫';
+          } else if (cls === 'amenity' && ['hospital', 'clinic', 'doctors'].includes(type) || name.includes('hospital') || name.includes('clinic') || name.includes('medical')) {
+            emoji = '🏥';
+          } else if (cls === 'railway' || cls === 'highway' || ['bus_station', 'bus_stop', 'airport'].includes(type) || name.includes('station') || name.includes('bus stand') || name.includes('bus stop') || name.includes('terminal') || name.includes('airport') || name.includes('metro') || name.includes('highway')) {
+            emoji = '🚉';
+          } else if (name.includes('village') || name.includes('town') || name.includes('city') || cls === 'boundary' || type === 'administrative') {
+            emoji = '🏡';
+          }
+
           const state = addr.state || '';
           const district = addr.state_district || addr.county || '';
-          const fullLabel = `${placeName}${state ? ', ' + state : ''}`;
+          const areaContext = addr.suburb || addr.neighbourhood || addr.quarter || addr.city_district || addr.village || addr.town || addr.city || '';
+          const contextString = [areaContext, state].filter(Boolean).join(', ');
+          const fullLabel = `${emoji} ${placeName}${contextString ? ' (' + contextString + ')' : ''}`;
+
           return {
             displayName: item.display_name,
             fullLabel,
-            placeName,
+            placeName: `${emoji} ${placeName}`,
             state,
             district,
             lat: item.lat,
@@ -136,8 +167,10 @@ export default function DriverDashboard() {
 
   const handlePublish = async (e) => {
     e.preventDefault();
+    if (publishing) return;
+    setPublishing(true);
     try {
-      await rideService.create({
+      const result = await rideService.create({
         sourceCity,
         destinationCity,
         pickupPoint,
@@ -166,8 +199,8 @@ export default function DriverDashboard() {
         destLat: Number(destLat),
         destLon: Number(destLon)
       });
-      alert('Ride published successfully! Seeding route to search feeds.');
-      setActiveTab('rides');
+      alert('Ride published successfully!');
+      
       // Reset form
       setSourceCity('');
       setDestinationCity('');
@@ -189,8 +222,13 @@ export default function DriverDashboard() {
       setSourceLon(78.4867);
       setDestLat(16.3067);
       setDestLon(80.4365);
+
+      // Navigate to the newly published ride details
+      navigate(`/ride/${result.id || result._id}`);
     } catch (err) {
       alert(err.message || 'Error publishing ride');
+    } finally {
+      setPublishing(false);
     }
   };
 
@@ -618,6 +656,11 @@ export default function DriverDashboard() {
                   <option value="SUV">SUV</option>
                   <option value="Hatchback">Hatchback</option>
                   <option value="Compact">Compact</option>
+                  <option value="Bike">Bike</option>
+                  <option value="Motorcycle">Motorcycle</option>
+                  <option value="Scooter">Scooter</option>
+                  <option value="Scooty">Scooty</option>
+                  <option value="Other">Other</option>
                 </select>
               </div>
               <div className="space-y-1.5">
@@ -689,9 +732,10 @@ export default function DriverDashboard() {
 
           <button 
             type="submit"
-            className="w-full md:w-auto bg-brand-500 hover:bg-brand-600 text-white font-bold py-3.5 px-8 rounded-2xl text-xs uppercase tracking-wider transition-all shadow-premium hover:shadow-premium-hover flex items-center justify-center scale-100 active:scale-95"
+            disabled={publishing}
+            className="w-full md:w-auto bg-brand-500 hover:bg-brand-600 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold py-3.5 px-8 rounded-2xl text-xs uppercase tracking-wider transition-all shadow-premium hover:shadow-premium-hover flex items-center justify-center scale-100 active:scale-95"
           >
-            Publish Intercity Ride
+            {publishing ? 'Publishing...' : 'Publish Intercity Ride'}
           </button>
         </form>
       )}

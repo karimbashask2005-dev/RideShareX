@@ -6,7 +6,8 @@ export default function MapPreview({
   sourceCoords, // { lat: number, lon: number }
   destCoords,   // { lat: number, lon: number }
   isLiveTracking = false,
-  trackingProgress = 0 // 0 to 100 percentage of trip completed
+  trackingProgress = 0, // 0 to 100 percentage of trip completed
+  vehicleType = 'Car'
 }) {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -105,9 +106,13 @@ export default function MapPreview({
 
     // Live Tracking Marker setup
     if (isLiveTracking) {
+      const isBike = vehicleType === 'Bike' || vehicleType === 'Motorcycle' || vehicleType === 'Scooter' || vehicleType === 'Scooty';
+      const emoji = (vehicleType === 'Scooter' || vehicleType === 'Scooty') ? '🛵' : (isBike ? '🏍️' : '🚗');
+      const label = isBike ? 'Two-Wheeler' : 'Car';
+
       const carIcon = L.divIcon({
         className: 'custom-div-icon',
-        html: `<div class="w-9 h-9 bg-slate-900 border-2 border-white rounded-2xl shadow-xl flex items-center justify-center text-lg animate-bounce ring-4 ring-indigo-500/20">🚗</div>`,
+        html: `<div class="w-9 h-9 bg-slate-900 border-2 border-white rounded-2xl shadow-xl flex items-center justify-center text-lg animate-bounce ring-4 ring-indigo-500/20">${emoji}</div>`,
         iconSize: [36, 36],
         iconAnchor: [18, 18]
       });
@@ -117,7 +122,7 @@ export default function MapPreview({
       const currentLon = sLon + (dLon - sLon) * (trackingProgress / 100);
 
       const carMarker = L.marker([currentLat, currentLon], { icon: carIcon }).addTo(map)
-        .bindPopup(`<b>Live Tracking Active</b><br/>Commute completed: ${Math.round(trackingProgress)}%`)
+        .bindPopup(`<b>Live ${label} Tracking Active</b><br/>Commute completed: ${Math.round(trackingProgress)}%`)
         .openPopup();
       
       carMarkerRef.current = carMarker;
