@@ -33,7 +33,7 @@ export default function App() {
   return (
     <AuthProvider>
       <SocketProvider>
-        <Router>
+        <Router basename={import.meta.env.BASE_URL}>
           <Routes>
             {/* Public Layout */}
             <Route element={<MainLayout />}>
