@@ -4,6 +4,7 @@ import { rideService, bookingService, CITIES } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import StatsCard from '../components/admin/StatsCard';
 import { MapPin, Calendar, Users, IndianRupee, Compass, ToggleLeft, ToggleRight, Sparkles, Check, X, ShieldAlert, ShieldCheck, AlertCircle } from 'lucide-react';
+import MapPickerModal from '../components/common/MapPickerModal';
 
 export default function DriverDashboard() {
   const { user } = useAuth();
@@ -49,6 +50,28 @@ export default function DriverDashboard() {
   const [sourceLon, setSourceLon] = useState(78.4867);
   const [destLat, setDestLat] = useState(16.3067);
   const [destLon, setDestLon] = useState(80.4365);
+  const [sourcePickerOpen, setSourcePickerOpen] = useState(false);
+  const [destPickerOpen, setDestPickerOpen] = useState(false);
+
+  const handleSelectSourceMap = (loc) => {
+    setSourceCity(loc.address);
+    setSourceState(loc.state || '');
+    setSourceDistrict(loc.district || '');
+    setSourceLandmark(loc.landmark || '');
+    setSourceLat(loc.lat);
+    setSourceLon(loc.lon);
+    setSourceIsCustom(true);
+  };
+
+  const handleSelectDestMap = (loc) => {
+    setDestinationCity(loc.address);
+    setDestState(loc.state || '');
+    setDestDistrict(loc.district || '');
+    setDestLandmark(loc.landmark || '');
+    setDestLat(loc.lat);
+    setDestLon(loc.lon);
+    setDestIsCustom(true);
+  };
 
   const handleCitySearch = async (input, setVal, setSuggestions) => {
     setVal(input);
@@ -247,7 +270,8 @@ export default function DriverDashboard() {
   const totalEarnings = confirmedBookings.reduce((sum, b) => sum + (b.fareAmount || 0), 0);
 
   return (
-    <div className="space-y-8">
+    <>
+      <div className="space-y-8">
       {/* Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatsCard 
@@ -360,18 +384,27 @@ export default function DriverDashboard() {
             <div className="space-y-1.5 md:col-span-1">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Source Location</label>
-                <label className="flex items-center gap-1.5 text-[11px] text-slate-500 font-semibold cursor-pointer select-none">
-                  <input 
-                    type="checkbox" 
-                    checked={sourceIsCustom} 
-                    onChange={(e) => {
-                      setSourceIsCustom(e.target.checked);
-                      setSourceCity('');
-                    }}
-                    className="rounded text-brand-500 border-slate-300 focus:ring-brand-400"
-                  />
-                  Village/Mandal override
-                </label>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setSourcePickerOpen(true)}
+                    className="text-[11px] text-brand-500 hover:text-brand-600 font-bold flex items-center gap-1 bg-slate-50 hover:bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-150 transition-colors"
+                  >
+                    🗺️ Select on Map
+                  </button>
+                  <label className="flex items-center gap-1.5 text-[11px] text-slate-500 font-semibold cursor-pointer select-none">
+                    <input 
+                      type="checkbox" 
+                      checked={sourceIsCustom} 
+                      onChange={(e) => {
+                        setSourceIsCustom(e.target.checked);
+                        setSourceCity('');
+                      }}
+                      className="rounded text-brand-500 border-slate-300 focus:ring-brand-400"
+                    />
+                    Village/Mandal override
+                  </label>
+                </div>
               </div>
 
               {!sourceIsCustom ? (
@@ -448,18 +481,27 @@ export default function DriverDashboard() {
             <div className="space-y-1.5 md:col-span-1">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Destination Location</label>
-                <label className="flex items-center gap-1.5 text-[11px] text-slate-500 font-semibold cursor-pointer select-none">
-                  <input 
-                    type="checkbox" 
-                    checked={destIsCustom} 
-                    onChange={(e) => {
-                      setDestIsCustom(e.target.checked);
-                      setDestinationCity('');
-                    }}
-                    className="rounded text-brand-500 border-slate-300 focus:ring-brand-400"
-                  />
-                  Village/Mandal override
-                </label>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setDestPickerOpen(true)}
+                    className="text-[11px] text-brand-500 hover:text-brand-600 font-bold flex items-center gap-1 bg-slate-50 hover:bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-150 transition-colors"
+                  >
+                    🗺️ Select on Map
+                  </button>
+                  <label className="flex items-center gap-1.5 text-[11px] text-slate-500 font-semibold cursor-pointer select-none">
+                    <input 
+                      type="checkbox" 
+                      checked={destIsCustom} 
+                      onChange={(e) => {
+                        setDestIsCustom(e.target.checked);
+                        setDestinationCity('');
+                      }}
+                      className="rounded text-brand-500 border-slate-300 focus:ring-brand-400"
+                    />
+                    Village/Mandal override
+                  </label>
+                </div>
               </div>
 
               {!destIsCustom ? (
@@ -822,6 +864,19 @@ export default function DriverDashboard() {
           )}
         </div>
       )}
-    </div>
+      </div>
+      
+      <MapPickerModal
+        isOpen={sourcePickerOpen}
+        onClose={() => setSourcePickerOpen(false)}
+        onSelect={handleSelectSourceMap}
+      />
+      
+      <MapPickerModal
+        isOpen={destPickerOpen}
+        onClose={() => setDestPickerOpen(false)}
+        onSelect={handleSelectDestMap}
+      />
+    </>
   );
 }

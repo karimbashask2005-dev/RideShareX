@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Calendar, Users, ArrowRightLeft, Search } from 'lucide-react';
 import { CITIES } from '../../services/api';
+import MapPickerModal from '../common/MapPickerModal';
 
 export default function HeroSearchForm({ initialValues = {} }) {
   const navigate = useNavigate();
@@ -11,6 +12,8 @@ export default function HeroSearchForm({ initialValues = {} }) {
   const [seats, setSeats] = useState(initialValues.seats || 1);
   const [sourceSuggestions, setSourceSuggestions] = useState([]);
   const [destSuggestions, setDestSuggestions] = useState([]);
+  const [sourcePickerOpen, setSourcePickerOpen] = useState(false);
+  const [destPickerOpen, setDestPickerOpen] = useState(false);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -100,7 +103,8 @@ export default function HeroSearchForm({ initialValues = {} }) {
   };
 
   return (
-    <form 
+    <>
+      <form 
       onSubmit={handleSearch}
       className="w-full bg-white rounded-3xl md:rounded-full border border-slate-100 shadow-premium p-4 md:py-3.5 md:px-6 flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-4 max-w-5xl mx-auto"
     >
@@ -118,6 +122,14 @@ export default function HeroSearchForm({ initialValues = {} }) {
             required
           />
         </div>
+        <button
+          type="button"
+          onClick={() => setSourcePickerOpen(true)}
+          className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-450 hover:text-brand-500 transition-colors flex-shrink-0"
+          title="Select on Map"
+        >
+          🗺️
+        </button>
         
         {sourceSuggestions.length > 0 && (
           <ul className="absolute left-0 top-full mt-2 w-full bg-white rounded-2xl border border-slate-100 shadow-lg max-h-48 overflow-y-auto z-40">
@@ -157,6 +169,14 @@ export default function HeroSearchForm({ initialValues = {} }) {
             required
           />
         </div>
+        <button
+          type="button"
+          onClick={() => setDestPickerOpen(true)}
+          className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-450 hover:text-brand-500 transition-colors flex-shrink-0"
+          title="Select on Map"
+        >
+          🗺️
+        </button>
 
         {destSuggestions.length > 0 && (
           <ul className="absolute left-0 top-full mt-2 w-full bg-white rounded-2xl border border-slate-100 shadow-lg max-h-48 overflow-y-auto z-40">
@@ -214,6 +234,25 @@ export default function HeroSearchForm({ initialValues = {} }) {
         <Search className="w-4.5 h-4.5 md:mr-2" />
         <span className="md:inline">Search</span>
       </button>
-    </form>
+      </form>
+      
+      <MapPickerModal
+        isOpen={sourcePickerOpen}
+        onClose={() => setSourcePickerOpen(false)}
+        onSelect={(loc) => {
+          setSource(loc.address);
+          setSourceSuggestions([]);
+        }}
+      />
+      
+      <MapPickerModal
+        isOpen={destPickerOpen}
+        onClose={() => setDestPickerOpen(false)}
+        onSelect={(loc) => {
+          setDestination(loc.address);
+          setDestSuggestions([]);
+        }}
+      />
+    </>
   );
 }
